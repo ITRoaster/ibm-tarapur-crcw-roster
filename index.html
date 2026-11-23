@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IBM Tarapur / CRCW Roster</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#e5e9f2;--blue:#2457d6;--navy:#14213d;--red:#d92d20;--green:#16834a;--orange:#b54708;--purple:#6941c6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--navy);color:#fff;padding:18px max(16px,calc((100vw - 1100px)/2));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0}header small{color:#c8d3e8}.wrap{max-width:1100px;margin:22px auto;padding:0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:0 0 16px;box-shadow:0 3px 14px #1720330a}
+h2{font-size:18px;margin:0 0 12px}h3{font-size:15px;margin:0 0 8px}.muted{color:var(--muted)}.small{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:block;font-size:13px;font-weight:650;margin:10px 0 5px}
+input,select,textarea{width:100%;border:1px solid #cfd6e4;border-radius:9px;padding:11px;background:#fff;color:var(--ink);font:inherit}
+button{border:0;border-radius:9px;padding:11px 15px;background:var(--blue);color:#fff;font-weight:650;cursor:pointer}
+button.secondary{background:#edf1fa;color:#26334d}button.danger{background:#fff0ee;color:var(--red)}button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.right{margin-left:auto}.hidden{display:none!important}
+.notice{padding:11px 13px;border-radius:10px;background:#eef4ff;color:#254a9b;margin:10px 0}.error{background:#fff0ee;color:#a5261c}.success{background:#eaf8ef;color:#17663c}
+.stat{padding:14px;border-radius:12px;background:#f6f8fc}.stat b{display:block;font-size:24px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.pill{display:inline-block;border-radius:30px;padding:4px 9px;font-size:12px;font-weight:700;background:#edf1fa}.CC,.GC{background:#f2eaff;color:#6941c6}.AC,.AT{background:#eaf2ff;color:#2457d6}.BC,.BT{background:#e8f7f2;color:#087443}.GT{background:#fff3df;color:#995300}.WOff{background:#ffebe9;color:#c62828}.Leave{background:#eaf8ef;color:#16834a}.COFF{background:#eaf3ff;color:#175cd3}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:24px}
+@media(max-width:600px){.wrap{margin:12px auto}.card{padding:14px}table{font-size:12px}th,td{padding:8px 5px}}
+</style>
+</head>
+<body>
+<header><div><h1>IBM Tarapur / CRCW Roster</h1><small>Shared engineer shift management</small></div><div id="headerUser" class="small">Not signed in</div></header>
+<main class="wrap">
+<section id="configCard" class="card">
+<h2>Connect your Firebase project</h2>
+<p class="muted">Paste the Firebase web configuration from Project settings → General → Your apps. It is public app configuration, not your password or a private service-account key.</p>
+<label>Firebase configuration (paste the full JavaScript object)</label>
+<textarea id="configInput" rows="8" placeholder='const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", appId: "..." };'></textarea>
+<div class="row"><button id="saveConfig">Connect Firebase</button><button id="clearConfig" class="secondary">Clear</button></div>
+<div id="configMsg" class="small"></div>
+</section>
+
+<section id="loginCard" class="card hidden">
+<h2>Sign in</h2>
+<div class="grid"><div><label>Email</label><input id="email" type="email" autocomplete="username" placeholder="your email"></div><div><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Password"></div></div>
+<div class="row" style="margin-top:14px"><button id="loginBtn">Sign in</button><button id="resetBtn" class="secondary">Send password reset email</button></div>
+<div id="loginMsg"></div>
+</section>
+
+<section id="appArea" class="hidden">
+<div class="row" style="margin-bottom:12px"><div id="welcome"></div><button id="logoutBtn" class="secondary right">Sign out</button></div>
+<section class="grid" id="stats">
+<div class="stat"><span class="small">Today's date</span><b id="todayDate">-</b></div>
+<div class="stat"><span class="small">Your shift today</span><b id="myShift">-</b></div>
+<div class="stat"><span class="small">Role</span><b id="myRole">-</b></div>
+</section>
+<section class="card">
+<div class="row"><h2>Today's roster</h2><button class="secondary right" id="toggleFull">Show full roster</button></div>
+<div id="todayRoster" class="muted">Loading roster…</div>
+</section>
+<section class="card">
+<h2>Request Leave / COFF</h2>
+<div class="grid"><div><label>Type</label><select id="requestType"><option>Leave</option><option>COFF</option></select></div><div><label>Date</label><input id="requestDate" type="date"></div></div>
+<label>Reason (optional)</label><input id="requestReason" placeholder="Reason">
+<div class="row" style="margin-top:12px"><button id="requestBtn">Submit request</button></div><div id="requestMsg"></div>
+</section>
+<section id="adminArea" class="hidden">
+<section class="card">
+<h2>TL control panel</h2>
+<div class="notice">Only the TL account can manage engineers and change roster assignments. Keep the TL UID in the Firestore rules consistent with the administrator account.</div>
+<h3>Add engineer account</h3>
+<div class="grid"><div><label>Engineer name</label><input id="newName" placeholder="Engineer name"></div><div><label>Email address</label><input id="newEmail" type="email" placeholder="engineer@company.com"></div><div><label>Temporary password</label><input id="newPassword" type="password" placeholder="At least 6 characters"></div></div>
+<div class="row" style="margin-top:12px"><button id="addEngineer">Create engineer</button></div><div id="addMsg"></div>
+<p class="small">The engineer should change the temporary password after first sign-in. Password reset emails can be sent from the login screen.</p>
+</section>
+<section class="card">
+<div class="row"><h2>Engineer list</h2><button id="refreshBtn" class="secondary right">Refresh</button></div>
+<div id="engineerList" class="muted">No engineers loaded.</div>
+</section>
+<section class="card">
+<h2>Generate weekly rotation</h2>
+<p class="muted">Rotation: CC → AC → BC → AT → BT → GT → repeat. Select the Monday starting date and the engineer who starts at CC. The generated weekly assignments are saved online. This creates the base weekly shift; TL can apply daily WOff, Leave, COFF or GC adjustments in the roster editor.</p>
+<div class="grid"><div><label>Week starting Monday</label><input id="weekStart" type="date"></div><div><label>Engineer starting at CC</label><select id="starter"></select></div></div>
+<div class="row" style="margin-top:12px"><button id="generateBtn">Generate this week's roster</button></div><div id="generateMsg"></div>
+</section>
+<section class="card">
+<div class="row"><h2>Manage roster</h2><div class="right"><input id="rosterDate" type="date" aria-label="Roster date"></div></div>
+<div id="manageRoster" class="muted">Choose a date to load the roster.</div>
+</section>
+<section class="card">
+<h2>Leave / COFF requests</h2><div id="requestsList" class="muted">Loading requests…</div>
+</section>
+</section>
+</section>
+<div id="globalMsg"></div>
+</main>
+<footer>IBM Tarapur / CRCW Roster · Firebase-connected starter version</footer>
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, addDoc, updateDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+const ADMIN_UID = "Z0smXfC6Qtauqsen3Tgp7lZ3BFC2";
+const SHIFTS = ["CC","AC","BC","AT","BT","GT"];
+const NAMES = ["Sameer","Dinesh","Pratik","Sandeep","Javed","Ranjan"];
+let app, auth, db, secondaryApp, secondaryAuth, currentUser, profile, allUsers=[], showAll=false;
+const $ = id => document.getElementById(id);
+const todayISO = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const mondayOf = value => { const d=new Date(value+"T12:00:00"); const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const addDays = (iso,n) => { const d=new Date(iso+"T12:00:00"); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const weekKey = iso => mondayOf(iso);
+const msg = (id,text,kind="notice") => { const el=$(id); if(el) el.innerHTML=text?`<div class="${kind}">${escapeHtml(text)}</div>`:""; };
+const escapeHtml = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const badge = s => `<span class="pill ${escapeHtml(s)}">${escapeHtml(s)}</span>`;
+function parseConfig(raw){
+  let t=raw.trim().replace(/^const\s+\w+\s*=\s*/,"").replace(/;\s*$/,"");
+  t=t.replace(/([,{]\s*)([A-Za-z_$][\w$]*)\s*:/g,'$1"$2":').replace(/'/g,'"');
+  return JSON.parse(t);
+}
+function initFirebase(config){
+  app=initializeApp(config); auth=getAuth(app); db=getFirestore(app);
+  $("configCard").classList.add("hidden"); $("loginCard").classList.remove("hidden");
+  $("headerUser").textContent="Firebase connected";
+  onAuthStateChanged(auth, async user=>{
+    currentUser=user;
+    if(!user){ $("appArea").classList.add("hidden"); $("loginCard").classList.remove("hidden"); $("headerUser").textContent="Not signed in"; return; }
+    $("loginCard").classList.add("hidden");
+    profile=null;
+    if(user.uid===ADMIN_UID) profile={name:"TL Administrator",role:"TL"};
+    else { const snap=await getDoc(doc(db,"users",user.uid)); profile=snap.exists()?snap.data():{name:user.email,role:"Engineer"}; }
+    $("headerUser").textContent=user.email||"Signed in";
+    $("appArea").classList.remove("hidden"); $("welcome").innerHTML=`<b>Welcome, ${escapeHtml(profile.name||user.email)}</b>`;
+    $("myRole").textContent=profile.role||"Engineer";
+    $("adminArea").classList.toggle("hidden",user.uid!==ADMIN_UID);
+    $("requestDate").value=todayISO(); $("todayDate").textContent=todayISO();
+    await refreshData();
+  });
+}
+$("saveConfig").onclick=()=>{
+  try{const c=parseConfig($("configInput").value); if(!c.apiKey||!c.projectId||!c.authDomain) throw new Error("Please paste the complete Firebase web configuration."); localStorage.setItem("ibmRosterFirebaseConfig",JSON.stringify(c)); initFirebase(c); msg("configMsg","Firebase connected.","success");}
+  catch(e){msg("configMsg",e.message,"error");}
+};
+$("clearConfig").onclick=()=>{localStorage.removeItem("ibmRosterFirebaseConfig");$("configInput").value="";msg("configMsg","Saved configuration cleared.");};
+$("loginBtn").onclick=async()=>{try{await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);msg("loginMsg","");}catch(e){msg("loginMsg",e.message,"error");}};
+$("resetBtn").onclick=async()=>{try{await sendPasswordResetEmail(auth,$("email").value.trim());msg("loginMsg","Password reset email sent.","success");}catch(e){msg("loginMsg",e.message,"error");}};
+$("logoutBtn").onclick=()=>signOut(auth);
+$("toggleFull").onclick=()=>{showAll=!showAll;$("toggleFull").textContent=showAll?"Show my shift only":"Show full roster";renderToday();};
+$("requestBtn").onclick=async()=>{try{await addDoc(collection(db,"leaveRequests"),{uid:currentUser.uid,name:profile.name||currentUser.email,type:$("requestType").value,date:$("requestDate").value,reason:$("requestReason").value.trim(),status:"Pending",createdAt:serverTimestamp()});msg("requestMsg","Request submitted to TL.","success");$("requestReason").value="";if(currentUser.uid===ADMIN_UID)loadRequests();}catch(e){msg("requestMsg",e.message,"error");}};
+async function refreshData(){await loadUsers();await renderToday();if(currentUser.uid===ADMIN_UID){populateStarter();$("weekStart").value=mondayOf(todayISO());$("rosterDate").value=todayISO();await loadManageRoster();await loadRequests();}}
+async function loadUsers(){const snap=await getDocs(collection(db,"users"));allUsers=snap.docs.map(d=>({uid:d.id,...d.data()}));if(currentUser.uid===ADMIN_UID){$("engineerList").innerHTML=allUsers.length?`<table><tr><th>Name</th><th>Email</th><th>Role</th></tr>${allUsers.map(u=>`<tr><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.role||"Engineer")}</td></tr>`).join("")}</table>`:"No engineer profiles yet.";}}
+function populateStarter(){const s=$("starter");s.innerHTML=allUsers.map(u=>`<option value="${escapeHtml(u.uid)}">${escapeHtml(u.name||u.email)}</option>`).join("");}
+async function getDayRows(date){const q=query(collection(db,"assignments"),where("date","==",date));const snap=await getDocs(q);return snap.docs.map(d=>({id:d.id,...d.data()}));}
+async function renderToday(){const date=todayISO();const rows=await getDayRows(date);const mine=rows.find(r=>r.uid===currentUser.uid);$("myShift").textContent=mine?mine.shift:"Not assigned";const visible=showAll||currentUser.uid===ADMIN_UID?rows:rows.filter(r=>r.uid===currentUser.uid);$("todayRoster").innerHTML=visible.length?`<table><tr><th>Engineer</th><th>Shift</th><th>Plant / note</th></tr>${visible.map(r=>`<tr><td>${escapeHtml(r.name)}</td><td>${badge(r.shift)}</td><td>${escapeHtml(r.note||"")}</td></tr>`).join("")}</table>`:`<p class="muted">No roster has been published for today yet.</p>`;}
+$("addEngineer").onclick=async()=>{
+ const name=$("newName").value.trim(),email=$("newEmail").value.trim(),password=$("newPassword").value;
+ if(!name||!email||password.length<6){msg("addMsg","Enter a name, valid email and a password of at least 6 characters.","error");return;}
+ try{
+  if(!secondaryApp){secondaryApp=initializeApp(app.options,"secondaryRosterApp");secondaryAuth=getAuth(secondaryApp);}
+  const cred=await createUserWithEmailAndPassword(secondaryAuth,email,password);
+  await setDoc(doc(db,"users",cred.user.uid),{name,email,role:"Engineer",active:true,createdAt:serverTimestamp()});
+  await signOut(secondaryAuth);
+  msg("addMsg",`Created account for ${name}. Ask them to sign in and change their temporary password using password reset.`,"success");
+  $("newName").value=$("newEmail").value=$("newPassword").value="";await refreshData();
+ }catch(e){msg("addMsg",e.message,"error");}
+};
+$("refreshBtn").onclick=refreshData;
+$("generateBtn").onclick=async()=>{
+ const start=$("weekStart").value,starter=$("starter").value;
+ if(!start||!starter||allUsers.length!==6){msg("generateMsg","Add all six engineer accounts first, then select the starting engineer.","error");return;}
+ if(mondayOf(start)!==start){msg("generateMsg","Please choose a Monday as the week start.","error");return;}
+ const idx=allUsers.findIndex(u=>u.uid===starter); const names=allUsers;
+ try{
+  for(let day=0;day<7;day++){
+   const date=addDays(start,day);
+   for(let i=0;i<6;i++){
+    const u=names[i];const shift=SHIFTS[(i-idx+6)%6];
+    const id=`${date}_${u.uid}`;
+    await setDoc(doc(db,"assignments",id),{date,weekStart:start,uid:u.uid,name:u.name||u.email,shift,note:"",updatedAt:serverTimestamp(),updatedBy:currentUser.uid});
+   }
+  }
+  msg("generateMsg","Weekly base roster saved for all six engineers. Review weekend coverage and weekly offs in the roster editor.","success");await loadManageRoster();await renderToday();
+ }catch(e){msg("generateMsg",e.message,"error");}
+};
+$("rosterDate").onchange=loadManageRoster;
+async function loadManageRoster(){
+ const date=$("rosterDate").value;if(!date)return;
+ const rows=await getDayRows(date);
+ if(!rows.length){$("manageRoster").innerHTML="<p class='muted'>No assignments for this date. Generate a weekly roster first.</p>";return;}
+ $("manageRoster").innerHTML=`<table><tr><th>Engineer</th><th>Shift / status</th><th>Note</th><th>Save</th></tr>${rows.map(r=>`<tr data-id="${escapeHtml(r.id)}"><td>${escapeHtml(r.name)}</td><td><select class="shiftSelect">${["CC","AC","BC","AT","BT","GT","GC","WOff","Leave","COFF"].map(s=>`<option ${r.shift===s?"selected":""}>${s}</option>`).join("")}</select></td><td><input class="noteInput" value="${escapeHtml(r.note||"")}" placeholder="Optional note"></td><td><button class="saveRow">Save</button></td></tr>`).join("")}</table>`;
+ $("manageRoster").querySelectorAll(".saveRow").forEach(btn=>btn.onclick=async()=>{const tr=btn.closest("tr");const id=tr.dataset.id;const shift=tr.querySelector(".shiftSelect").value;const note=tr.querySelector(".noteInput").value;try{await updateDoc(doc(db,"assignments",id),{shift,note,updatedAt:serverTimestamp(),updatedBy:currentUser.uid});btn.textContent="Saved";await renderToday();}catch(e){alert(e.message);}});
+}
+async function loadRequests(){
+ const snap=await getDocs(collection(db,"leaveRequests"));const list=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+ $("requestsList").innerHTML=list.length?`<table><tr><th>Engineer</th><th>Type</th><th>Date</th><th>Status</th><th>Action</th></tr>${list.map(r=>`<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.type)}</td><td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.status)}</td><td>${r.status==="Pending"?`<button data-id="${escapeHtml(r.id)}" data-status="Approved">Approve</button> <button class="secondary" data-id="${escapeHtml(r.id)}" data-status="Rejected">Reject</button>`:"-"}</td></tr>`).join("")}</table>`:"No requests yet.";
+ $("requestsList").querySelectorAll("button[data-id]").forEach(b=>b.onclick=async()=>{await updateDoc(doc(db,"leaveRequests",b.dataset.id),{status:b.dataset.status,reviewedBy:currentUser.uid,reviewedAt:serverTimestamp()});await loadRequests();});
+}
+const saved=localStorage.getItem("ibmRosterFirebaseConfig");
+if(saved){try{initFirebase(JSON.parse(saved));}catch(e){$("configCard").classList.remove("hidden");}}
+</script>
+</body>
+</html>
